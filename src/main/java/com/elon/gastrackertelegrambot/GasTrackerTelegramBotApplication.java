@@ -11,14 +11,19 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 @EnableScheduling
 public class GasTrackerTelegramBotApplication {
 
+    private static MyAmazingBot myAmazingBot;
+
+    public GasTrackerTelegramBotApplication(MyAmazingBot myAmazingBot) {
+        GasTrackerTelegramBotApplication.myAmazingBot = myAmazingBot;
+    }
+
     public static void main(String[] args) {
         SpringApplication.run(GasTrackerTelegramBotApplication.class, args);
         try {
             TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-            botsApi.registerBot(new MyAmazingBot());
+            botsApi.registerBot(myAmazingBot);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
-
 }

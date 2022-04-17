@@ -4,14 +4,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.transport.ProxyProvider;
 
 import java.time.Duration;
 import java.util.Map;
@@ -25,10 +29,20 @@ public class MyAmazingBot extends TelegramLongPollingBot {
     public static double threshold = 0;
     public static boolean taskHasBeenCompleted = true;
     public static SendMessage message = new SendMessage(); // Create a SendMessage object with mandatory fields
-    WebClient client = WebClient.create("https://api.etherscan.io");
+    WebClient client = WebClient.builder().baseUrl("https://api.etherscan.io")
+            .clientConnector(new ReactorClientHttpConnector(HttpClient.create()
+                    .proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP)
+                            .host("127.0.0.1")
+                            .port(7890)
+                            .connectTimeoutMillis(30000))))
+            .build();
     WebClient.UriSpec<WebClient.RequestBodySpec> uriSpec = client.method(HttpMethod.GET);
     WebClient.RequestBodySpec bodySpec = uriSpec.uri("/api?module=gastracker&action=gasoracle&apikey=" + apikey);
     ObjectMapper objectMapper = new ObjectMapper();
+
+    public MyAmazingBot(DefaultBotOptions options) {
+        super(options);
+    }
 
     @Override
     public String getBotUsername() {
@@ -62,7 +76,7 @@ public class MyAmazingBot extends TelegramLongPollingBot {
         if (!taskHasBeenCompleted) {
             Map<String, Object> res = gasTracker();
             if ("1".equals(res.get("status"))) {
-                Map<String, Object> result = (Map<String, Object>) res.get("result");
+                @SuppressWarnings("unchecked") Map<String, Object> result = (Map<String, Object>) res.get("result");
                 double suggestBaseFee = Double.parseDouble((String) result.get("suggestBaseFee"));
                 if (threshold > suggestBaseFee) {
                     message.setText("suggestBaseFee:" + suggestBaseFee);
@@ -80,7 +94,7 @@ public class MyAmazingBot extends TelegramLongPollingBot {
     public Map<String, Object> gasTracker() throws JsonProcessingException {
         Mono<String> response = bodySpec.retrieve().bodyToMono(String.class);
         String jsonResponse = response.block(Duration.ofMinutes(1));
-        return objectMapper.readValue(jsonResponse, new TypeReference<Map<String, Object>>() {
+        return objectMapper.readValue(jsonResponse, new TypeReference<>() {
         });
     }
 }

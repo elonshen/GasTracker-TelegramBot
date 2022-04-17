@@ -11,7 +11,7 @@ class GasTrackerTelegramBotApplicationTests {
 
     @Test
     void contextLoads() throws JsonProcessingException {
-        MyAmazingBot myAmazingBot = new MyAmazingBot();
+        MyAmazingBot myAmazingBot = new MyAmazingBot(new MyBotOptions());
         Map<String, Object> map = myAmazingBot.gasTracker();
         System.out.println(map.size());
     }
